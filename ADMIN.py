@@ -5,6 +5,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.image import Image
+import pandas as pd
 
 class HomeScreen(BoxLayout):
     def __init__(self, **kwargs):
@@ -47,7 +48,7 @@ class StudentScreen(BoxLayout):
         modify_button.bind(on_press=self.open_modify_window)
         self.add_widget(modify_button)
 
-        self.liste_eleves = self.charger_liste_eleves()
+        
 
         search_button = Button(text="Chercher")
         search_button.bind(on_press=self.open_search_window)
@@ -69,24 +70,6 @@ class StudentScreen(BoxLayout):
         self.clear_widgets()
         self.add_widget(GestionEleves())
 
-
-    def charger_liste_eleves(self):
-        try:
-            with open("liste_eleves.txt", "r") as file:
-                eleves = []
-                for line in file.readlines():
-                    nom, prenom, niveau = line.strip().split(',')
-                    eleve = {'Nom': nom, 'Prénom': prenom, 'niveau': niveau}
-                    eleves.append(eleve)
-                return eleves
-        except FileNotFoundError:
-            print("Fichier introuvable. La liste d'élèves est vide.")
-            return []
-
-    def enregistrer_liste_eleves(self):
-        with open("liste_eleves.txt", "w") as file:
-            for eleve in self.liste_eleves:
-                file.write(f"{eleve['Nom']},{eleve['Prénom']},{eleve['niveau']}\n")
 
     def open_modify_window(self, instance):
         content = BoxLayout(orientation='vertical')
@@ -128,18 +111,26 @@ class StudentScreen(BoxLayout):
         nom_a_modifier = self.input_nom.text
         prenom_a_modifier = self.input_prenom.text
         nouveau_niveau = self.input_niveau.text
-        
 
-        for eleve in self.liste_eleves:
-            if eleve['Nom'] == nom_a_modifier and eleve['Prénom'] == prenom_a_modifier:
-                eleve['niveau'] = nouveau_niveau
-                eleve['Nom'] = self.input_nnom.text  # Mise à jour du nom
-                eleve['Prénom'] = self.input_nprenom.text  # Mise à jour du prénom
-                self.enregistrer_liste_eleves()  # Mettre à jour le fichier après la modification
-                print(f"Données de l'élève {nom_a_modifier} {prenom_a_modifier} modifiées.")
-                self.popup.dismiss()
-                break
+        try:
+            # Charger les données du fichier Excel
+            data = pd.read_excel("liste_eleves.xlsx")
 
+            # Modifier les données dans le DataFrame Pandas
+            mask = (data['Nom'] == nom_a_modifier) & (data['Prénom'] == prenom_a_modifier)
+            data.loc[mask, 'niveau'] = nouveau_niveau
+            data.loc[mask, 'Nom'] = self.input_nnom.text  # Mise à jour du nom
+            data.loc[mask, 'Prénom'] = self.input_nprenom.text  # Mise à jour du prénom
+
+            # Enregistrer les modifications dans le fichier Excel
+            data.to_excel("liste_eleves.xlsx", index=False)
+            print(f"Données de l'élève {nom_a_modifier} {prenom_a_modifier} modifiées dans le fichier Excel.")
+            self.popup.dismiss()
+
+        except FileNotFoundError:
+            print("Fichier introuvable. Impossible de modifier les données.")
+        except Exception as e:
+            print(f"Erreur lors de la modification des données : {e}")
 
 
     def open_search_window(self, instance):
@@ -160,56 +151,65 @@ class StudentScreen(BoxLayout):
     def chercher_eleve(self, instance):
         nom_recherche = self.input_nom.text
         try:
-            with open("liste_eleves.txt", "r") as file:
-                lignes = file.readlines()
-                eleve_trouve = False
+            # Charger les données depuis le fichier Excel
+            data = pd.read_excel("liste_eleves.xlsx")
 
-                for ligne in lignes:
-                    infos_eleve = ligne.strip().split(",")
-                    if infos_eleve[0].lower() == nom_recherche.lower():
-                        self.popup.dismiss()
-                        popup = Popup(title="Résultat de la recherche", content=Label(text=f"Élève trouvé : {infos_eleve[1]} {infos_eleve[0]}, niveau : {infos_eleve[2]}"), size_hint=(None, None), size=(400, 200))
-                    
-                        btn_supprimer = Button(text="Supprimer", size_hint=(None, None), size=(100, 50))
-                        btn_supprimer.bind(on_press=lambda instance, nom=infos_eleve[0], prenom=infos_eleve[1]: self.supprimer_eleve(nom, prenom))
+            eleve_trouve = False
 
-                        layout = BoxLayout(orientation='vertical')
-                        layout.add_widget(Label(text=f"Élève trouvé : {infos_eleve[1]} {infos_eleve[0]}, niveau : {infos_eleve[2]}"))
-                        layout.add_widget(btn_supprimer)
-                    
-                        popup.content = layout
-                        popup.open()
-                        eleve_trouve = True
-                        break
-
-                if not eleve_trouve:
+            for index, row in data.iterrows():
+                if row['Nom'].lower() == nom_recherche.lower():
                     self.popup.dismiss()
-                    popup = Popup(title="Résultat de la recherche", content=Label(text="Élève non trouvé."), size_hint=(None, None), size=(300, 200))
+                
+                    popup = Popup(title="Résultat de la recherche", size_hint=(None, None), size=(400, 200))
+                
+                    btn_supprimer = Button(text="Supprimer", size_hint=(None, None), size=(100, 50))
+                    btn_supprimer.bind(on_press=lambda instance, nom=row['Nom'], prenom=row['Prénom']: self.supprimer_eleve(nom, prenom))
+
+                    layout = BoxLayout(orientation='vertical')
+                    layout.add_widget(Label(text=f"Élève trouvé : {row['Prénom']} {row['Nom']}, niveau : {row['niveau']}"))
+                    layout.add_widget(btn_supprimer)
+
+                    popup.content = layout
                     popup.open()
+                    eleve_trouve = True
+                    break
+
+            if not eleve_trouve:
+                self.popup.dismiss()
+                popup = Popup(title="Résultat de la recherche", content=Label(text="Élève non trouvé."), size_hint=(None, None), size=(300, 200))
+                popup.open()
         except FileNotFoundError:
             self.popup.dismiss()
             popup = Popup(title="Erreur", content=Label(text="Fichier non trouvé."), size_hint=(None, None), size=(300, 200))
             popup.open()
+
 
     def supprimer_eleve(self, nom, prenom):
         try:
-            with open("liste_eleves.txt", "r") as file:
-                lignes = file.readlines()
-        
-            with open("liste_eleves.txt", "a") as file:
-                for ligne in lignes:
-                    infos_eleve = ligne.strip().split(",")
-                    if infos_eleve[0] != nom or infos_eleve[1] != prenom:
-                        file.write(ligne)
-                    
-            self.popup.dismiss()
-            popup = Popup(title="Succès", content=Label(text="Élève supprimé avec succès."), size_hint=(None, None), size=(300, 200))
-            popup.open()
+            # Charger les données depuis le fichier Excel
+            data = pd.read_excel("liste_eleves.xlsx")
+
+            # Trouver l'index de l'élève à supprimer
+            index_to_drop = data[(data['Nom'] == nom) & (data['Prénom'] == prenom)].index
+
+            if not index_to_drop.empty:
+                # Supprimer l'élève
+                data.drop(index_to_drop, inplace=True)
+
+                # Enregistrer les modifications dans le fichier Excel
+                data.to_excel("liste_eleves.xlsx", index=False)
+
+                self.popup.dismiss()
+                popup = Popup(title="Succès", content=Label(text="Élève supprimé avec succès."), size_hint=(None, None), size=(300, 200))
+                popup.open()
+            else:
+                self.popup.dismiss()
+                popup = Popup(title="Erreur", content=Label(text="Élève non trouvé."), size_hint=(None, None), size=(300, 200))
+                popup.open()
         except FileNotFoundError:
             self.popup.dismiss()
             popup = Popup(title="Erreur", content=Label(text="Fichier non trouvé."), size_hint=(None, None), size=(300, 200))
             popup.open()
-
 
 
     def open_create_account_window(self, instance):
@@ -300,34 +300,51 @@ class GestionEleves(BoxLayout):
         self.liste_eleves = []  # Initialise une liste vide pour stocker les élèves
 
     def ajouter_eleve(self, instance):
-        # Récupère les informations de l'élève à partir des champs de saisie
-        nom = self.input_nom.text
-        prenom = self.input_prenom.text
-        niveau = self.input_niveau.text
+        try:
+            # Récupère les informations de l'élève à partir des champs de saisie
+            nom = self.input_nom.text
+            prenom = self.input_prenom.text
+            niveau = self.input_niveau.text
 
-        # Vérifie si tous les champs sont remplis
-        if nom and prenom and niveau:
-            # Crée un dictionnaire pour représenter un élève avec les détails fournis
-            eleve = {'Nom': nom, 'Prénom': prenom, 'niveau': niveau}
-            self.liste_eleves.append(eleve)
-            self.enregistrer_liste_eleves()
-            self.afficher_liste_eleves()
-        else:
-            print("Veuillez remplir tous les champs.")
+            # Vérifie si tous les champs sont remplis
+            if nom and prenom and niveau:
+                # Charger les données depuis le fichier Excel
+                data = pd.read_excel("liste_eleves.xlsx")
+
+                # Créer un dictionnaire pour l'élève à ajouter
+                nouvel_eleve = {'Nom': nom, 'Prénom': prenom, 'niveau': niveau}
+
+                # Ajouter le nouvel élève à une liste de dictionnaires
+                liste_eleves = data.to_dict('records')
+                liste_eleves.append(nouvel_eleve)
+
+                # Créer un nouveau DataFrame à partir de la liste mise à jour
+                nouveau_data = pd.DataFrame(liste_eleves)
+
+                # Enregistrer le DataFrame mis à jour dans le fichier Excel
+                nouveau_data.to_excel("liste_eleves.xlsx", index=False)
+
+                self.afficher_liste_eleves()  # Actualise l'affichage des élèves
+            else:
+                print("Veuillez remplir tous les champs.")
+        except FileNotFoundError:
+            print("Fichier non trouvé.")
 
     def afficher_liste_eleves(self):
-        # Affiche la liste de tous les élèves
-        liste_texte = "Liste des élèves :\n"
-        for eleve in self.liste_eleves:
-            liste_texte += f"{eleve['Prénom']} {eleve['Nom']}, niveau : {eleve['niveau']}\n"
+        try:
+            # Charger les données depuis le fichier Excel
+            data = pd.read_excel("liste_eleves.xlsx")
 
-        self.liste_eleves_label.text = liste_texte
+            # Afficher la liste des élèves
+            liste_texte = "Liste des élèves :\n"
+            for _, eleve in data.iterrows():
+                liste_texte += f"{eleve['Prénom']} {eleve['Nom']}, niveau : {eleve['niveau']}\n"
 
-    def enregistrer_liste_eleves(self):
-        # Enregistre la liste des élèves dans un fichier texte
-        with open("liste_eleves.txt", "a") as file:
-            for eleve in self.liste_eleves:
-                file.write(f"{eleve['Nom']},{eleve['Prénom']},{eleve['niveau']}\n")
+            self.liste_eleves_label.text = liste_texte
+        except FileNotFoundError:
+            print("Fichier non trouvé.")
+
+    
 
     def GoBack_click(self,instance):
         self.clear_widgets()
@@ -348,8 +365,6 @@ class TeacherScreen(BoxLayout):
         modify_button.bind(on_press=self.open_modify_window)
         self.add_widget(modify_button)
 
-        self.liste_enseignants = self.charger_liste_enseignants()
-
 
         search_button = Button(text="Chercher")
         search_button.bind(on_press=self.open_search_window)
@@ -367,25 +382,6 @@ class TeacherScreen(BoxLayout):
     def open_add_window(self, instance):
         self.clear_widgets()
         self.add_widget(GestionProf())
-
-
-    def charger_liste_enseignants(self):
-        try:
-            with open("liste_enseignants.txt", "r") as file:
-                enseignants = []
-                for line in file.readlines():
-                    nom, prenom, niveau = line.strip().split(',')
-                    enseignant = {'Nom': nom, 'Prénom': prenom, 'niveau': niveau}
-                    enseignants.append(enseignant)
-                return enseignants
-        except FileNotFoundError:
-            print("Fichier introuvable. La liste d'élèves est vide.")
-            return []
-
-    def enregistrer_liste_enseignants(self):
-        with open("liste_enseignants.txt", "w") as file:
-            for enseignant in self.liste_enseignants:
-                file.write(f"{enseignant['Nom']},{enseignant['Prénom']},{enseignant['niveau']}\n")
 
 
     def open_modify_window(self, instance):
@@ -422,17 +418,28 @@ class TeacherScreen(BoxLayout):
     def modifier_enseignant(self, instance):
         nom_a_modifier = self.input_nom.text
         prenom_a_modifier = self.input_prenom.text
-        nnom=self.input_nnom.text
-        nprenom=self.input_nprenom.text
+        nouveau_niveau = self.input_niveau.text
 
-        for enseignant in self.liste_enseignants:
-            if enseignant['Nom'] == nom_a_modifier and enseignant['Prénom'] == prenom_a_modifier:
-                enseignant['Nom'] = self.input_nnom.text  # Mise à jour du nom
-                enseignant['Prénom'] = self.input_nprenom.text  # Mise à jour du prénom
-                self.enregistrer_liste_enseignants()  # Mettre à jour le fichier après la modification
-                print(f"Données de l'enseignant {nom_a_modifier} {prenom_a_modifier} modifiées.")
-                self.popup.dismiss()
-                break
+        try:
+            # Charger les données du fichier Excel des enseignants
+            data = pd.read_excel("liste_enseignants.xlsx")
+
+            # Modifier les données dans le DataFrame Pandas
+            mask = (data['Nom'] == nom_a_modifier) & (data['Prénom'] == prenom_a_modifier)
+            data.loc[mask, 'niveau'] = nouveau_niveau
+            data.loc[mask, 'Nom'] = self.input_nnom.text  # Mise à jour du nom
+            data.loc[mask, 'Prénom'] = self.input_nprenom.text  # Mise à jour du prénom
+
+            # Enregistrer les modifications dans le fichier Excel des enseignants
+            data.to_excel("liste_enseignants.xlsx", index=False)
+            print(f"Données de l'enseignant {nom_a_modifier} {prenom_a_modifier} modifiées dans le fichier Excel.")
+            self.popup.dismiss()
+
+        except FileNotFoundError:
+            print("Fichier introuvable. Impossible de modifier les données.")
+        except Exception as e:
+            print(f"Erreur lors de la modification des données : {e}")
+
 
     def open_search_window(self, instance):
         content = BoxLayout(orientation='vertical')
@@ -452,55 +459,66 @@ class TeacherScreen(BoxLayout):
     def chercher_enseignant(self, instance):
         nom_recherche = self.input_nom.text
         try:
-            with open("liste_enseignants.txt", "r") as file:
-                lignes = file.readlines()
-                enseignant_trouve = False
+            # Charger les données depuis le fichier Excel des enseignants
+            data = pd.read_excel("liste_enseignants.xlsx")
 
-                for ligne in lignes:
-                    infos_enseignant = ligne.strip().split(",")
-                    if infos_enseignant[0].lower() == nom_recherche.lower():
-                        self.popup.dismiss()
-                        popup = Popup(title="Résultat de la recherche", content=Label(text=f"Enseignant trouvé : {infos_enseignant[1]} {infos_enseignant[0]}"), size_hint=(None, None), size=(400, 200))
-                    
-                        btn_supprimer = Button(text="Supprimer", size_hint=(None, None), size=(100, 50))
-                        btn_supprimer.bind(on_press=lambda instance, nom=infos_enseignant[0], prenom=infos_enseignant[1]: self.supprimer_enseignant(nom, prenom))
+            enseignant_trouve = False
 
-                        layout = BoxLayout(orientation='vertical')
-                        layout.add_widget(Label(text=f"Enseignant trouvé : {infos_enseignant[1]} {infos_enseignant[0]}"))
-                        layout.add_widget(btn_supprimer)
-                    
-                        popup.content = layout
-                        popup.open()
-                        enseignant_trouve = True
-                        break
-
-                if not enseignant_trouve:
+            for index, row in data.iterrows():
+                if row['Nom'].lower() == nom_recherche.lower():
                     self.popup.dismiss()
-                    popup = Popup(title="Résultat de la recherche", content=Label(text="Enseignant non trouvé."), size_hint=(None, None), size=(300, 200))
+                
+                    popup = Popup(title="Résultat de la recherche", size_hint=(None, None), size=(400, 200))
+                
+                    btn_supprimer = Button(text="Supprimer", size_hint=(None, None), size=(100, 50))
+                    btn_supprimer.bind(on_press=lambda instance, nom=row['Nom'], prenom=row['Prénom']: self.supprimer_enseignant(nom, prenom))
+
+                    layout = BoxLayout(orientation='vertical')
+                    layout.add_widget(Label(text=f"Enseignant trouvé : {row['Prénom']} {row['Nom']}"))
+                    layout.add_widget(btn_supprimer)
+
+                    popup.content = layout
                     popup.open()
+                    enseignant_trouve = True
+                    break
+
+            if not enseignant_trouve:
+                self.popup.dismiss()
+                popup = Popup(title="Résultat de la recherche", content=Label(text="Enseignant non trouvé."), size_hint=(None, None), size=(300, 200))
+                popup.open()
         except FileNotFoundError:
             self.popup.dismiss()
             popup = Popup(title="Erreur", content=Label(text="Fichier non trouvé."), size_hint=(None, None), size=(300, 200))
             popup.open()
+
 
     def supprimer_enseignant(self, nom, prenom):
         try:
-            with open("liste_enseignants.txt", "r") as file:
-                lignes = file.readlines()
-        
-            with open("liste_enseignants.txt", "w") as file:
-                for ligne in lignes:
-                    infos_enseignant = ligne.strip().split(",")
-                    if infos_enseignant[0] != nom or infos_enseignant[1] != prenom:
-                        file.write(ligne)
-                    
-            self.popup.dismiss()
-            popup = Popup(title="Succès", content=Label(text="Enseignant supprimé avec succès."), size_hint=(None, None), size=(300, 200))
-            popup.open()
+            # Charger les données depuis le fichier Excel des enseignants
+            data = pd.read_excel("liste_enseignants.xlsx")
+
+            # Trouver l'index de l'enseignant à supprimer
+            index_to_drop = data[(data['Nom'] == nom) & (data['Prénom'] == prenom)].index
+
+            if not index_to_drop.empty:
+                # Supprimer l'enseignant
+                data.drop(index_to_drop, inplace=True)
+
+                # Enregistrer les modifications dans le fichier Excel
+                data.to_excel("liste_enseignants.xlsx", index=False)
+
+                self.popup.dismiss()
+                popup = Popup(title="Succès", content=Label(text="Enseignant supprimé avec succès."), size_hint=(None, None), size=(300, 200))
+                popup.open()
+            else:
+                self.popup.dismiss()
+                popup = Popup(title="Erreur", content=Label(text="Enseignant non trouvé."), size_hint=(None, None), size=(300, 200))
+                popup.open()
         except FileNotFoundError:
             self.popup.dismiss()
             popup = Popup(title="Erreur", content=Label(text="Fichier non trouvé."), size_hint=(None, None), size=(300, 200))
             popup.open()
+
 
 
 
@@ -583,33 +601,51 @@ class GestionProf(BoxLayout):
         self.liste_enseignants = []  # Initialise une liste vide pour stocker les élèves
 
     def ajouter_enseignant(self, instance):
-        # Récupère les informations de l'enseignant à partir des champs de saisie
-        nom = self.input_nom.text
-        prenom = self.input_prenom.text
+        try:
+            # Récupère les informations de l'enseignant à partir des champs de saisie
+            nom = self.input_nom.text
+            prenom = self.input_prenom.text
+            # Ajoutez d'autres champs si nécessaire
 
-        # Vérifie si tous les champs sont remplis
-        if nom and prenom :
-            # Crée un dictionnaire pour représenter un élève avec les détails fournis
-            enseignant = {'Nom': nom, 'Prénom': prenom,}
-            self.liste_enseignants.append(enseignant)
-            self.enregistrer_liste_enseignants()
-            self.afficher_liste_enseignants()
-        else:
-            print("Veuillez remplir tous les champs.")
+            # Vérifie si tous les champs sont remplis
+            if nom and prenom:
+                # Charger les données depuis le fichier Excel
+                data = pd.read_excel("liste_enseignants.xlsx")
+
+                # Créer un dictionnaire pour l'enseignant à ajouter
+                nouvel_enseignant = {'Nom': nom, 'Prénom': prenom}
+
+                # Ajouter le nouvel enseignant à une liste de dictionnaires
+                liste_enseignants = data.to_dict('records')
+                liste_enseignants.append(nouvel_enseignant)
+
+                # Créer un nouveau DataFrame à partir de la liste mise à jour
+                nouveau_data = pd.DataFrame(liste_enseignants)
+
+                # Enregistrer le DataFrame mis à jour dans le fichier Excel
+                nouveau_data.to_excel("liste_enseignants.xlsx", index=False)
+
+                self.afficher_liste_enseignants()  # Actualise l'affichage des enseignants
+            else:
+                print("Veuillez remplir tous les champs.")
+        except FileNotFoundError:
+                print("Fichier non trouvé.")
+
 
     def afficher_liste_enseignants(self):
-        # Affiche la liste de tous les élèves
-        liste_texte = "Liste des enseignants :\n"
-        for enseignant in self.liste_enseignants:
-            liste_texte += f"{enseignant['Prénom']} {enseignant['Nom']}, \n"
+        try:
+            # Charger les données depuis le fichier Excel
+            data = pd.read_excel("liste_enseignants.xlsx")
 
-        self.liste_enseignants_label.text = liste_texte
+            # Afficher la liste des enseignants
+            liste_texte = "Liste des enseignants :\n"
+            for _, enseignant in data.iterrows():
+                liste_texte += f"{enseignant['Prénom']} {enseignant['Nom']}\n"
 
-    def enregistrer_liste_enseignants(self):
-        # Enregistre la liste des élèves dans un fichier texte
-        with open("liste_enseignants.txt", "a") as file:
-            for enseignant in self.liste_enseignants:
-                file.write(f"{enseignant['Nom']},{enseignant['Prénom']},\n")
+            self.liste_enseignants_label.text = liste_texte
+        except FileNotFoundError:
+            print("Fichier non trouvé.")
+
 
     def GoBack_click(self,instance):
         self.clear_widgets()
