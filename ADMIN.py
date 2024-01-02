@@ -225,6 +225,9 @@ class StudentScreen(BoxLayout):
         self.label_niveau = Label(text="Niveau de l'élève :")
         self.input_niveau = TextInput(multiline=False)
 
+        self.label_mot_de_passe = Label(text="Mot de passe :")
+        self.input_mot_de_passe = TextInput(multiline=False)
+
         self.create_button = Button(text="Créer le compte")
         self.create_button.bind(on_press=self.creer_compte)
 
@@ -234,26 +237,43 @@ class StudentScreen(BoxLayout):
         content.add_widget(self.input_prenom)
         content.add_widget(self.label_niveau)
         content.add_widget(self.input_niveau)
+        content.add_widget(self.label_mot_de_passe)
+        content.add_widget(self.input_mot_de_passe)
         content.add_widget(self.create_button)
 
         self.popup.open()
 
     def creer_compte(self, instance):
-        nom = self.input_nom.text
-        prenom = self.input_prenom.text
-        niveau = self.input_niveau.text
+        try:
+            # Récupère les informations de l'eleve à partir des champs de saisie
+            username = f"{self.input_nom.text}.{self.input_prenom.text}"
+            
+            mot_de_passe = self.input_mot_de_passe.text  # Champ pour le mot de passe
+            # Ajoutez d'autres champs si nécessaire
 
-        if nom and prenom and niveau:
-            eleve = {'Nom': nom, 'Prénom': prenom, 'Niveau': niveau}
-            self.enregistrer_compte_eleve(eleve)
-            print(f"Le compte pour {nom} {prenom} a été créé.")
-            self.popup.dismiss()
-        else:
-            print("Veuillez remplir tous les champs.")
+            # Vérifie si tous les champs sont remplis
+            if username and mot_de_passe:
+                # Charger les données depuis le fichier Excel
+                data = pd.read_excel("comptes_eleves.xlsx")
 
-    def enregistrer_compte_eleve(self, eleve):
-        with open("comptes_eleves.txt", "a") as file:
-            file.write(f"Nom: {eleve['Nom']}, Prénom: {eleve['Prénom']}, Niveau: {eleve['Niveau']}\n")
+                # Créer un dictionnaire pour l'eleve  à ajouter
+                enseignant = {'Username':username, 'Mot de passe': mot_de_passe}
+
+                # Ajouter le nouvel eleve à une liste de dictionnaires
+                comptes_eleves = data.to_dict('records')
+                comptes_eleves.append(enseignant)
+
+                # Créer un nouveau DataFrame à partir de la liste mise à jour
+                nouveau_data = pd.DataFrame(comptes_eleves)
+
+                # Enregistrer le DataFrame mis à jour dans le fichier Excel
+                nouveau_data.to_excel("comptes_eleves.xlsx", index=False)
+
+                self.popup.dismiss()
+            else:
+                print("Veuillez remplir tous les champs.")
+        except FileNotFoundError:
+            print("Fichier non trouvé.")
 
     
     def GoBack_click(self,instance):
@@ -533,6 +553,9 @@ class TeacherScreen(BoxLayout):
         self.label_prenom = Label(text="Prénom de l'enseignant :")
         self.input_prenom = TextInput(multiline=False)
 
+        self.label_mot_de_passe = Label(text="Mot de passe :")
+        self.input_mot_de_passe = TextInput(multiline=False)
+
         self.create_button = Button(text="Créer le compte")
         self.create_button.bind(on_press=self.creer_compte)
 
@@ -540,25 +563,46 @@ class TeacherScreen(BoxLayout):
         content.add_widget(self.input_nom)
         content.add_widget(self.label_prenom)
         content.add_widget(self.input_prenom)
+        content.add_widget(self.label_mot_de_passe)
+        content.add_widget(self.input_mot_de_passe)
         content.add_widget(self.create_button)
+        
 
         self.popup.open()
 
     def creer_compte(self, instance):
-        nom = self.input_nom.text
-        prenom = self.input_prenom.text
+        try:
+            # Récupère les informations de l'enseignant à partir des champs de saisie
+            username = f"{self.input_nom.text}.{self.input_prenom.text}"
+            
+            mot_de_passe = self.input_mot_de_passe.text  # Champ pour le mot de passe
+            # Ajoutez d'autres champs si nécessaire
 
-        if nom and prenom:
-            enseignant = {'Nom': nom, 'Prénom': prenom}
-            self.enregistrer_compte_enseignant(enseignant)
-            print(f"Le compte pour {nom} {prenom} a été créé.")
-            self.popup.dismiss()
-        else:
-            print("Veuillez remplir tous les champs.")
+            # Vérifie si tous les champs sont remplis
+            if username and mot_de_passe:
+                # Charger les données depuis le fichier Excel
+                data = pd.read_excel("comptes_enseignants.xlsx")
 
-    def enregistrer_compte_enseignant(self, enseignant):
-        with open("comptes_enseignants.txt", "a") as file:
-            file.write(f"Nom: {enseignant['Nom']}, Prénom: {enseignant['Prénom']}\n")
+                # Créer un dictionnaire pour l'enseignant à ajouter
+                enseignant = {'Username':username, 'Mot de passe': mot_de_passe}
+
+                # Ajouter le nouvel enseignant à une liste de dictionnaires
+                comptes_enseignants = data.to_dict('records')
+                comptes_enseignants.append(enseignant)
+
+                # Créer un nouveau DataFrame à partir de la liste mise à jour
+                nouveau_data = pd.DataFrame(comptes_enseignants)
+
+                # Enregistrer le DataFrame mis à jour dans le fichier Excel
+                nouveau_data.to_excel("comptes_enseignants.xlsx", index=False)
+                
+                self.popup.dismiss()
+               
+            else:
+                print("Veuillez remplir tous les champs.")
+        except FileNotFoundError:
+            print("Fichier non trouvé.")
+
 
     
     def GoBack_click(self,instance):
