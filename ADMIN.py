@@ -254,10 +254,10 @@ class StudentScreen(BoxLayout):
             # Vérifie si tous les champs sont remplis
             if username and mot_de_passe:
                 # Charger les données depuis le fichier Excel
-                data = pd.read_excel("comptes_eleves.xlsx")
+                data = pd.read_excel("comptes.xlsx")
 
                 # Créer un dictionnaire pour l'eleve  à ajouter
-                enseignant = {'Username':username, 'Mot de passe': mot_de_passe}
+                enseignant = {'Username':username, 'Mot de passe': mot_de_passe,'type':"S"}
 
                 # Ajouter le nouvel eleve à une liste de dictionnaires
                 comptes_eleves = data.to_dict('records')
@@ -267,7 +267,7 @@ class StudentScreen(BoxLayout):
                 nouveau_data = pd.DataFrame(comptes_eleves)
 
                 # Enregistrer le DataFrame mis à jour dans le fichier Excel
-                nouveau_data.to_excel("comptes_eleves.xlsx", index=False)
+                nouveau_data.to_excel("comptes.xlsx", index=False)
 
                 self.popup.dismiss()
             else:
@@ -581,10 +581,10 @@ class TeacherScreen(BoxLayout):
             # Vérifie si tous les champs sont remplis
             if username and mot_de_passe:
                 # Charger les données depuis le fichier Excel
-                data = pd.read_excel("comptes_enseignants.xlsx")
+                data = pd.read_excel("comptes.xlsx")
 
                 # Créer un dictionnaire pour l'enseignant à ajouter
-                enseignant = {'Username':username, 'Mot de passe': mot_de_passe}
+                enseignant = {'Username':username, 'Mot de passe': mot_de_passe,'type':"T"}
 
                 # Ajouter le nouvel enseignant à une liste de dictionnaires
                 comptes_enseignants = data.to_dict('records')
@@ -594,7 +594,7 @@ class TeacherScreen(BoxLayout):
                 nouveau_data = pd.DataFrame(comptes_enseignants)
 
                 # Enregistrer le DataFrame mis à jour dans le fichier Excel
-                nouveau_data.to_excel("comptes_enseignants.xlsx", index=False)
+                nouveau_data.to_excel("comptes.xlsx", index=False)
                 
                 self.popup.dismiss()
                
