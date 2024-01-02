@@ -11,16 +11,20 @@ class HomeScreen(BoxLayout):
     def __init__(self, **kwargs):
         super(HomeScreen, self).__init__(**kwargs)
         self.orientation = "vertical"
+        header = Label(text='ADMINISTARTION', size_hint=(None,None),size=(100,60),font_size=30, color=[1, 1, 1, 1])
+        header.pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        self.add_widget(header)
+        
         
         self.add_widget(Image(source="ECC.jpg"))
 
-        student_button = Button(text="Élève",size_hint=(0.5,0.2))
+        student_button = Button(text="Élève",size_hint=(0.3,0.1),background_color=(1,1,1,1))
         student_button.bind(on_press=self.on_student_click)
         self.add_widget(student_button)
         student_button.pos_hint={'center_x': 0.5, 'center_y': 0.5}
 
 
-        teacher_button = Button(text="Enseignant",size_hint=(0.5,0.2))
+        teacher_button = Button(text="Enseignant",size_hint=(0.3,0.1),background_color=(1,1,1,1))
         teacher_button.bind(on_press=self.on_teacher_click)
         self.add_widget(teacher_button)
         teacher_button.pos_hint={'center_x': 0.5, 'center_y': 0.5}
@@ -40,28 +44,28 @@ class StudentScreen(BoxLayout):
         super(StudentScreen, self).__init__(**kwargs)
         self.orientation = "vertical"
 
-        add_button = Button(text="Ajouter")
+        add_button = Button(text="Ajouter",size_hint=(0.4, 0.2), background_color=[1, 1, 1, 1], color=[0, 0.5, 0.7, 1])
         add_button.bind(on_press=self.open_add_window)
         self.add_widget(add_button)
 
-        modify_button = Button(text="Modifier")
+        modify_button = Button(text="Modifier",size_hint=(0.4, 0.2), background_color=[1, 1, 1, 1], color=[0, 0.5, 0.7, 1])
         modify_button.bind(on_press=self.open_modify_window)
         self.add_widget(modify_button)
 
         
 
-        search_button = Button(text="Chercher")
+        search_button = Button(text="Chercher",size_hint=(0.4, 0.2), background_color=[1, 1, 1, 1], color=[0, 0.5, 0.7, 1])
         search_button.bind(on_press=self.open_search_window)
         self.add_widget(search_button)
 
         
         
 
-        create_account_button = Button(text="Créer un compte élève")
+        create_account_button = Button(text="Créer un compte élève",size_hint=(0.4, 0.2), background_color=[1, 1, 1, 1], color=[0, 0.5, 0.7, 1])
         create_account_button.bind(on_press=self.open_create_account_window)
         self.add_widget(create_account_button)
 
-        GoBack_button = Button(text="retour",size_hint=(0.5, 0.2))
+        GoBack_button = Button(text="retour",size_hint=(0.3, 0.1))
         GoBack_button.bind(on_press=self.GoBack_click)
         self.add_widget(GoBack_button)
         GoBack_button.pos_hint={'center_x': 0.5, 'center_y': 0.5}
@@ -278,7 +282,7 @@ class StudentScreen(BoxLayout):
     
     def GoBack_click(self,instance):
         self.clear_widgets()
-        self.add_widget(HomeScreen())
+        self.add_widget(StudentScreen())
 
         # Add student-specific interface elements here
 #AJOUTER ELEVE
@@ -607,7 +611,7 @@ class TeacherScreen(BoxLayout):
     
     def GoBack_click(self,instance):
         self.clear_widgets()
-        self.add_widget(HomeScreen())
+        self.add_widget(StudentScreen())
 
         # Add teacher-specific interface elements here
 #######################################################
